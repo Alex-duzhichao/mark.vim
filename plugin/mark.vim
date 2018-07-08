@@ -106,32 +106,11 @@ set cpo&vim
 
 " Default bindings
 
-if !hasmapto('<Plug>MarkSet', 'n')
-	nmap <unique> <silent> <leader>m <Plug>MarkSet
-endif
-if !hasmapto('<Plug>MarkSet', 'v')
-	vmap <unique> <silent> <leader>m <Plug>MarkSet
-endif
-if !hasmapto('<Plug>MarkRegex', 'n')
-	nmap <unique> <silent> <leader>r <Plug>MarkRegex
-endif
-if !hasmapto('<Plug>MarkRegex', 'v')
-	vmap <unique> <silent> <leader>r <Plug>MarkRegex
-endif
-if !hasmapto('<Plug>MarkClear', 'n')
-	nmap <unique> <silent> <leader>n <Plug>MarkClear
-endif
-
-nnoremap <silent> <Plug>MarkSet   :call
-	\ <sid>MarkCurrentWord()<cr>
-vnoremap <silent> <Plug>MarkSet   <c-\><c-n>:call
-	\ <sid>DoMark(<sid>GetVisualSelectionEscaped("enV"))<cr>
-nnoremap <silent> <Plug>MarkRegex :call
-	\ <sid>MarkRegex()<cr>
-vnoremap <silent> <Plug>MarkRegex <c-\><c-n>:call
-	\ <sid>MarkRegex(<sid>GetVisualSelectionEscaped("N"))<cr>
-nnoremap <silent> <Plug>MarkClear :call
-	\ <sid>DoMark(<sid>CurrentMark())<cr>
+nmap <unique> <silent> u :call <sid>MarkCurrentWord()<cr>
+vmap <unique> <silent> u <c-\><c-n>:call <sid>DoMark(<sid>GetVisualSelectionEscaped("enV"))<cr>
+nmap <unique> <silent> <leader>r <Plug>MarkRegex :call <sid>MarkRegex()<cr>
+vmap <unique> <silent> <leader>r <c-\><c-n>:call <sid>MarkRegex(<sid>GetVisualSelectionEscaped("N"))<cr>
+nmap <unique> <silent> <s-u> :call <sid>DoMark(<sid>CurrentMark())<cr>
 
 " Here is a sumerization of the following keys' behaviors:
 " 
@@ -154,8 +133,8 @@ nnoremap <silent> <Plug>MarkClear :call
 "       do a \*; otherwise (\/ is the
 "       most recently used), do a \/.
 
-nnoremap <silent> <leader>* :call <sid>SearchCurrentMark()<cr>
-nnoremap <silent> <leader># :call <sid>SearchCurrentMark("b")<cr>
+nnoremap <silent> - :call <sid>SearchCurrentMark()<cr>
+nnoremap <silent> _ :call <sid>SearchCurrentMark("b")<cr>
 nnoremap <silent> <leader>/ :call <sid>SearchAnyMark()<cr>
 nnoremap <silent> <leader>? :call <sid>SearchAnyMark("b")<cr>
 nnoremap <silent> * :if !<sid>SearchNext()<bar>execute "norm! *"<bar>endif<cr>
