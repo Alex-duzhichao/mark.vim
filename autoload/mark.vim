@@ -295,6 +295,8 @@ if exists('*SearchSpecial#WrapMessage')
 		redraw
 		call SearchSpecial#WrapMessage(a:searchType, a:searchPattern, a:isBackward)
 	endfunction
+
+
 	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
 		call SearchSpecial#EchoSearchPattern(a:searchType, a:searchPattern, a:isBackward)
 	endfunction
@@ -303,6 +305,8 @@ else
 		" Limit length to avoid "Hit ENTER" prompt.
 		return strpart(a:message, 0, (&columns / 2)) . (len(a:message) > (&columns / 2) ? "..." : "")
 	endfunction
+
+
 	function! s:WrapMessage( searchType, searchPattern, isBackward )
 		redraw
 		let v:warningmsg = printf('%s search hit %s, continuing at %s', a:searchType, (a:isBackward ? 'TOP' : 'BOTTOM'), (a:isBackward ? 'BOTTOM' : 'TOP'))
@@ -310,6 +314,8 @@ else
 		echo s:Trim(v:warningmsg)
 		echohl None
 	endfunction
+
+
 	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
 		let l:message = (a:isBackward ? '?' : '/') .  a:searchPattern
 		echohl SearchSpecialSearchType
@@ -319,29 +325,94 @@ else
 	endfunction
 endif
 
+
 function! s:EscapeText( text )
 	return substitute( escape(a:text, '\' . '^$.*[~'), "\n", '\\n', 'ge' )
 endfunction
+
+
 function! s:IsIgnoreCase( expr )
 	return ((exists('g:mwIgnoreCase') ? g:mwIgnoreCase : &ignorecase) && a:expr !~# '\\\@<!\\C')
 endfunction
+
+
+function! mark#GetCurrentWord()
+	let l:cword = expand('<cword>')
+	if ! empty(l:cword)
+		let l:regexp = s:EscapeText(l:cword)
+		" The star command only creates a \<whole word\> search pattern if the
+		" <cword> actually only consists of keyword characters.
+		if match(cword, "[#|.|-]") < 0
+			return '\<' . l:regexp . '\>'
+		endif
+
+		let cline = getline(".")
+		let begin_index = col(".") - match(cline, cword)
+		let l = split(cword, "[#|.|-]")
+
+		let passed_char = 0
+		for v in l
+			let passed_char = passed_char + len(v)
+			if passed_char >= begin_index
+				return v
+			endif
+			let passed_char = passed_char + 1
+		endfor
+	endif
+	return ''
+endfunction
+
+
+function! mark#CompareList(lhs, rhs)
+    let index = 0
+    while index < len(a:lhs)
+        if a:lhs[index] < a:rhs[index]
+            return -1
+        elseif a:lhs[index] > a:rhs[index]
+            return 1
+        endif
+        let index = index + 1
+    endwhile
+    return 0
+endfunction
+
+
+function! mark#FixVisualModePosition()
+	if mark#CompareList(g:pos, [0, 0, 0, 0])
+		let l_pos = getpos("'<")
+		let r_pos = getpos("'>")
+		let direction = 'right'
+		if mark#CompareList(g:pos, r_pos) == 0
+			let direction = 'left'
+		endif
+
+		if direction == 'right'
+			call setpos('.', r_pos)
+		else
+			call setpos('.', l_pos)
+		endif
+	endif
+endfunction
+
 " Mark the current word, like the built-in star command.
 " If the cursor is on an existing mark, remove it.
 function! mark#MarkCurrentWord( groupNum )
 	let l:regexp = (a:groupNum == 0 ? mark#CurrentMark()[0] : '')
 	if empty(l:regexp)
-		let l:cword = expand('<cword>')
-		if ! empty(l:cword)
-			let l:regexp = s:EscapeText(l:cword)
-			" The star command only creates a \<whole word\> search pattern if the
-			" <cword> actually only consists of keyword characters.
-			if l:cword =~# '^\k\+$'
-				let l:regexp = '\<' . l:regexp . '\>'
-			endif
-		endif
+		" let l:cword = expand('<cword>')
+		" if ! empty(l:cword)
+			" let l:regexp = s:EscapeText(l:cword)
+			" " The star command only creates a \<whole word\> search pattern if the
+			" " <cword> actually only consists of keyword characters.
+			" if l:cword =~# '^\k\+$'
+				" let l:regexp = '\<' . l:regexp . '\>'
+			" endif
+		" endif
+		let l:regexp = mark#GetCurrentWord()
 	endif
 	return (empty(l:regexp) ? 0 : mark#DoMark(a:groupNum, l:regexp)[0])
 endfunction
+
 
 function! mark#GetVisualSelection()
 	let save_clipboard = &clipboard
@@ -354,15 +425,22 @@ function! mark#GetVisualSelection()
 	let &clipboard = save_clipboard
 	return res
 endfunction
+
+
 function! mark#GetVisualSelectionAsLiteralPattern()
 	return s:EscapeText(mark#GetVisualSelection())
 endfunction
+
+
 function! mark#GetVisualSelectionAsRegexp()
 	return substitute(mark#GetVisualSelection(), '\n', '', 'g')
 endfunction
+
+
 function! mark#GetVisualSelectionAsLiteralWhitespaceIndifferentPattern()
 	return substitute(escape(mark#GetVisualSelection(), '\' . '^$.*[~'), '\_s\+', '\\_s\\+', 'g')
 endfunction
+
 
 " Manually input a regular expression.
 function! mark#MarkRegex( groupNum, regexpPreset )
@@ -380,12 +458,15 @@ function! mark#MarkRegex( groupNum, regexpPreset )
 	return mark#DoMarkAndSetCurrent(a:groupNum, l:regexp)[0]
 endfunction
 
+
 function! s:Cycle( ... )
 	let l:currentCycle = s:cycle
 	let l:newCycle = (a:0 ? a:1 : s:cycle) + 1
 	let s:cycle = (l:newCycle < s:markNum ? l:newCycle : 0)
 	return l:currentCycle
 endfunction
+
+
 function! s:FreeGroupIndex()
 	let i = 0
 	while i < s:markNum
@@ -396,6 +477,8 @@ function! s:FreeGroupIndex()
 	endwhile
 	return -1
 endfunction
+
+
 function! mark#NextUsedGroupIndex( isBackward, isWrapAround, startIndex, count )
 	if a:isBackward
 		let l:indices = range(a:startIndex - 1, 0, -1)
@@ -464,6 +547,8 @@ function! s:MarkMatch( indices, expr )
 		let w:mwMatch[l:index] = matchadd('MarkWord' . (l:index + 1), l:expr, l:priority)
 	endif
 endfunction
+
+
 " Initialize mark colors in a (new) window.
 function! mark#UpdateMark()
 	let i = 0
@@ -476,32 +561,37 @@ function! mark#UpdateMark()
 		let i += 1
 	endwhile
 endfunction
+
+
 " Set / clear matches in all windows.
 function! s:MarkScope( indices, expr )
 	" By entering a window, its height is potentially increased from 0 to 1 (the
 	" minimum for the current window). To avoid any modification, save the window
 	" sizes and restore them after visiting all windows.
 	let l:originalWindowLayout = winrestcmd()
-		let l:originalWinNr = winnr()
-		let l:previousWinNr = winnr('#') ? winnr('#') : 1
-			noautocmd windo call s:MarkMatch(a:indices, a:expr)
-		noautocmd execute l:previousWinNr . 'wincmd w'
-		noautocmd execute l:originalWinNr . 'wincmd w'
+	let l:originalWinNr = winnr()
+	let l:previousWinNr = winnr('#') ? winnr('#') : 1
+	noautocmd windo call s:MarkMatch(a:indices, a:expr)
+	noautocmd execute l:previousWinNr . 'wincmd w'
+	noautocmd execute l:originalWinNr . 'wincmd w'
 	silent! execute l:originalWindowLayout
 endfunction
+
+
 " Update matches in all windows.
 function! mark#UpdateScope()
 	" By entering a window, its height is potentially increased from 0 to 1 (the
 	" minimum for the current window). To avoid any modification, save the window
 	" sizes and restore them after visiting all windows.
 	let l:originalWindowLayout = winrestcmd()
-		let l:originalWinNr = winnr()
-		let l:previousWinNr = winnr('#') ? winnr('#') : 1
-			noautocmd windo call mark#UpdateMark()
-		noautocmd execute l:previousWinNr . 'wincmd w'
-		noautocmd execute l:originalWinNr . 'wincmd w'
+	let l:originalWinNr = winnr()
+	let l:previousWinNr = winnr('#') ? winnr('#') : 1
+	noautocmd windo call mark#UpdateMark()
+	noautocmd execute l:previousWinNr . 'wincmd w'
+	noautocmd execute l:originalWinNr . 'wincmd w'
 	silent! execute l:originalWindowLayout
 endfunction
+
 
 function! s:MarkEnable( enable, ...)
 	if s:enabled != a:enable
@@ -517,6 +607,8 @@ function! s:MarkEnable( enable, ...)
 		endif
 	endif
 endfunction
+
+
 function! s:EnableAndMarkScope( indices, expr )
 	if s:enabled
 		" Marks are already enabled, we just need to push the changes to all
@@ -550,6 +642,8 @@ function! s:SetPattern( index, pattern )
 		call s:SavePattern()
 	endif
 endfunction
+
+
 function! mark#ClearAll()
 	let i = 0
 	let indices = []
@@ -576,6 +670,8 @@ function! mark#ClearAll()
 		echo 'All marks cleared'
 	endif
 endfunction
+
+
 function! s:SetMark( index, regexp, ... )
 	if a:0
 		if s:lastSearch == a:index

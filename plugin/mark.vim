@@ -353,16 +353,18 @@ autocmd ColorScheme * call <SID>DefineHighlightings(<SID>GetPalette(), 0)
 highlight def link SearchSpecialSearchType MoreMsg
 
 
-
 "- mappings -------------------------------------------------------------------
 
 nnoremap <silent> <Plug>MarkSet               :<C-u>if ! mark#MarkCurrentWord(v:count)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
-vnoremap <silent> <Plug>MarkSet               :<C-u>if ! mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
-vnoremap <silent> <Plug>MarkIWhiteSet         :<C-u>if ! mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralWhitespaceIndifferentPattern())[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+vnoremap <silent> <Plug>MarkSet               :<C-u>if ! mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<Bar>call mark#FixVisualModePosition()<CR>
+vnoremap <silent> <Plug>MarkIWhiteSet         :<C-u>if ! mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralWhitespaceIndifferentPattern())[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<Bar>call mark#FixVisualModePosition()<CR>
 nnoremap <silent> <Plug>MarkRegex             :<C-u>if ! mark#MarkRegex(v:count, '')<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 vnoremap <silent> <Plug>MarkRegex             :<C-u>if ! mark#MarkRegex(v:count, mark#GetVisualSelectionAsRegexp())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkClear             :<C-u>if ! mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
+" nnoremap <silent> <Plug>MarkClear             :<C-u>if ! mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkAllClear          :<C-u>call mark#ClearAll()<CR>
+
+nnoremap <silent> <Plug>MarkClear             :<C-u>if !empty(mark#CurrentMark()[0])<Bar>call mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))<CR>else<Bar>call mark#ClearAll()<CR>endif<CR>
+
 nnoremap <silent> <Plug>MarkConfirmAllClear   :<C-u>if confirm('Really delete all marks? This cannot be undone.', "&Yes\n&No") == 1<Bar>call mark#ClearAll()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkToggle            :<C-u>call mark#Toggle()<CR>
 
@@ -390,44 +392,47 @@ nnoremap <silent> <Plug>MarkSearchCascadeNextNoStop     :<C-u>if ! mark#cascade#
 nnoremap <silent> <Plug>MarkSearchCascadePrevNoStop     :<C-u>if ! mark#cascade#Next(v:count1, 0, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 
 
+" nnoremap <unique> e <Plug>MarkSet
 if !hasmapto('<Plug>MarkSet', 'n')
-	nmap <unique> <Leader>m <Plug>MarkSet
+	" nmap <unique> <Leader>m <Plug>MarkSet
+	nmap <unique> u <Plug>MarkSet
 endif
 if !hasmapto('<Plug>MarkSet', 'x')
-	xmap <unique> <Leader>m <Plug>MarkSet
+	" xmap <unique> <Leader>m <Plug>MarkSet
+	xmap <unique> u <Plug>MarkIWhiteSet
 endif
 " No default mapping for <Plug>MarkIWhiteSet.
 if !hasmapto('<Plug>MarkRegex', 'n')
 	nmap <unique> <Leader>r <Plug>MarkRegex
 endif
-if !hasmapto('<Plug>MarkRegex', 'x')
-	xmap <unique> <Leader>r <Plug>MarkRegex
-endif
+" if !hasmapto('<Plug>MarkRegex', 'x')
+	" xmap <unique> <Leader>r <Plug>MarkRegex
+" endif
 if !hasmapto('<Plug>MarkClear', 'n')
-	nmap <unique> <Leader>n <Plug>MarkClear
+	nmap <unique> <a-c> <Plug>MarkClear
 endif
 " No default mapping for <Plug>MarkAllClear.
 " No default mapping for <Plug>MarkConfirmAllClear.
 " No default mapping for <Plug>MarkToggle.
 
 if !hasmapto('<Plug>MarkSearchCurrentNext', 'n')
-	nmap <unique> <Leader>* <Plug>MarkSearchCurrentNext
+	nmap <unique> n <Plug>MarkSearchCurrentNext
 endif
 if !hasmapto('<Plug>MarkSearchCurrentPrev', 'n')
-	nmap <unique> <Leader># <Plug>MarkSearchCurrentPrev
+	nmap <unique> N <Plug>MarkSearchCurrentPrev
 endif
 if !hasmapto('<Plug>MarkSearchAnyNext', 'n')
-	nmap <unique> <Leader>/ <Plug>MarkSearchAnyNext
+	nmap <unique> - <Plug>MarkSearchAnyNext
 endif
 if !hasmapto('<Plug>MarkSearchAnyPrev', 'n')
-	nmap <unique> <Leader>? <Plug>MarkSearchAnyPrev
+	nmap <unique> _ <Plug>MarkSearchAnyPrev
 endif
-if !hasmapto('<Plug>MarkSearchNext', 'n')
-	nmap <unique> * <Plug>MarkSearchNext
-endif
-if !hasmapto('<Plug>MarkSearchPrev', 'n')
-	nmap <unique> # <Plug>MarkSearchPrev
-endif
+" if !hasmapto('<Plug>MarkSearchNext', 'n')
+	" nmap <unique> * <Plug>MarkSearchNext
+" endif
+" if !hasmapto('<Plug>MarkSearchPrev', 'n')
+	" nmap <unique> # <Plug>MarkSearchPrev
+" endif
 " No default mapping for <Plug>MarkSearchOrCurNext
 " No default mapping for <Plug>MarkSearchOrCurPrev
 " No default mapping for <Plug>MarkSearchOrAnyNext
