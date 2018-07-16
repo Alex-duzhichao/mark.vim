@@ -348,7 +348,7 @@ function! mark#GetCurrentWord()
 
 		let cline = getline(".")
 		let begin_index = col(".") - match(cline, cword)
-		let l = split(cword, "[#|.|-]")
+		let l = split(cword, "[#|.|-|:]")
 
 		let passed_char = 0
 		for v in l
@@ -514,6 +514,9 @@ function! s:MarkMatch( indices, expr )
 			" Truncate the matches.
 			for l:match in filter(w:mwMatch[s:markNum : ], 'v:val > 0')
 				silent! call matchdelete(l:match)
+				if l:match == s:lastMark
+					let s:lastMark = -1
+				endif
 			endfor
 			let w:mwMatch = w:mwMatch[0 : (s:markNum - 1)]
 		else
@@ -526,6 +529,9 @@ function! s:MarkMatch( indices, expr )
 		if w:mwMatch[l:index] > 0
 			silent! call matchdelete(w:mwMatch[l:index])
 			let w:mwMatch[l:index] = 0
+			if l:index == s:lastMark
+				let s:lastMark = -1
+			endif
 		endif
 	endfor
 
@@ -544,6 +550,7 @@ function! s:MarkMatch( indices, expr )
 		" allow other custom highlightings to sneak in between.
 		let l:priority = -10 - s:markNum + 1 + l:index
 
+		let s:lastMark = l:index
 		let w:mwMatch[l:index] = matchadd('MarkWord' . (l:index + 1), l:expr, l:priority)
 	endif
 endfunction
@@ -669,6 +676,33 @@ function! mark#ClearAll()
 	else
 		echo 'All marks cleared'
 	endif
+endfunction
+
+function! mark#ClearAllOther()
+	let l:currentIndex = mark#CurrentMark()[2]
+
+	let i = 0
+	let indices = []
+	while i < s:markNum
+		if (i == l:currentIndex)
+			let i += 1
+			continue
+		endif
+		if ! empty(s:pattern[i])
+			call s:SetPattern(i, '')
+			call add(indices, i)
+		endif
+		let i += 1
+	endwhile
+	let s:lastSearch = l:currentIndex
+
+	" Re-enable marks; not strictly necessary, since all marks have just been
+	" cleared, and marks will be re-enabled, anyway, when the first mark is
+	" added. It's just more consistent for mark persistence. But save the full
+	" refresh, as we do the update ourselves.
+	" call s:MarkEnable(0, 0)
+
+	call s:MarkScope(l:indices, '')
 endfunction
 
 
@@ -839,6 +873,8 @@ function! s:IsRegexpValid( expr )
 		return 0
 	endtry
 endfunction
+
+
 function! mark#DoMarkAndSetCurrent( groupNum, ... )
 	if a:0 && ! s:IsRegexpValid(a:1)
 		return [0, 0]
@@ -852,6 +888,8 @@ function! mark#DoMarkAndSetCurrent( groupNum, ... )
 
 	return l:result
 endfunction
+
+
 function! mark#SetMark( groupNum, ... )
 	" For the :Mark command, don't query when the passed mark group doesn't
 	" exist (interactivity in Ex commands is unexpected). Instead, return an
@@ -922,6 +960,19 @@ function! mark#SearchCurrentMark( isBackward )
 	else
 		let l:result = s:Search(l:markText, v:count1, a:isBackward, l:markPosition, s:RenderMark(l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
 		let s:lastSearch = l:markIndex
+	endif
+
+	return l:result
+endfunction
+
+function! mark#SearchLastMark(isBackward)
+	let l:result = 0
+
+	if s:lastMark == -1
+		let l:result = mark#SearchAnyMark(a:isBackward)
+		let s:lastMark = mark#CurrentMark()[2]
+	else
+		let l:result = s:Search(s:pattern[s:lastMark], v:count1, a:isBackward, [], s:RenderMark(s:lastMark + 1))
 	endif
 
 	return l:result
@@ -1480,12 +1531,6 @@ endfunction
 
 "- initializations ------------------------------------------------------------
 
-augroup Mark
-	autocmd!
-	autocmd WinEnter * if ! exists('w:mwMatch') | call mark#UpdateMark() | endif
-	autocmd TabEnter * call mark#UpdateScope()
-augroup END
-
 " Define global variables and initialize current scope.
 function! mark#Init()
 	let s:markNum = 0
@@ -1496,6 +1541,7 @@ function! mark#Init()
 	let s:names = repeat([''], s:markNum)
 	let s:cycle = 0
 	let s:lastSearch = -1
+	let s:lastMark = -1
 	let s:enabled = 1
 endfunction
 function! mark#ReInit( newMarkNum )

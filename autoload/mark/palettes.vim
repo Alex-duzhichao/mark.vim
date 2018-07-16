@@ -16,6 +16,7 @@
 
 function! mark#palettes#Extended()
 	return [
+		\   { 'ctermbg':'LightYellow','ctermfg':'Black', 'guibg':'#B5890e', 'guifg':'#06364A' },
 		\   { 'ctermbg':'Blue',       'ctermfg':'Black', 'guibg':'#A1B7FF', 'guifg':'#001E80' },
 		\   { 'ctermbg':'Magenta',    'ctermfg':'Black', 'guibg':'#FFA1C6', 'guifg':'#80005D' },
 		\   { 'ctermbg':'Green',      'ctermfg':'Black', 'guibg':'#ACFFA1', 'guifg':'#0F8000' },

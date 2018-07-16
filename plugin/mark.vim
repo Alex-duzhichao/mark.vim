@@ -362,12 +362,13 @@ nnoremap <silent> <Plug>MarkRegex             :<C-u>if ! mark#MarkRegex(v:count,
 vnoremap <silent> <Plug>MarkRegex             :<C-u>if ! mark#MarkRegex(v:count, mark#GetVisualSelectionAsRegexp())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 " nnoremap <silent> <Plug>MarkClear             :<C-u>if ! mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkAllClear          :<C-u>call mark#ClearAll()<CR>
-
-nnoremap <silent> <Plug>MarkClear             :<C-u>if !empty(mark#CurrentMark()[0])<Bar>call mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))<CR>else<Bar>call mark#ClearAll()<CR>endif<CR>
+nnoremap <silent> <Plug>MarkClear             :<C-u>if !empty(mark#CurrentMark()[0])<Bar>call mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))<CR>else<Bar>call mark#ClearAll()<CR>endif<CR>:nohlsearch<cr>
 
 nnoremap <silent> <Plug>MarkConfirmAllClear   :<C-u>if confirm('Really delete all marks? This cannot be undone.', "&Yes\n&No") == 1<Bar>call mark#ClearAll()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkToggle            :<C-u>call mark#Toggle()<CR>
 
+nnoremap <silent> <Plug>MarkSearchLastMarkNext :<C-u>if ! mark#SearchLastMark(0)<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchLastMarkPrev :<C-u>if ! mark#SearchLastMark(1)<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkSearchCurrentNext :<C-u>if ! mark#SearchCurrentMark(0)<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkSearchCurrentPrev :<C-u>if ! mark#SearchCurrentMark(1)<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkSearchAnyNext     :<C-u>if ! mark#SearchAnyMark(0)<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
@@ -395,7 +396,9 @@ nnoremap <silent> <Plug>MarkSearchCascadePrevNoStop     :<C-u>if ! mark#cascade#
 " nnoremap <unique> e <Plug>MarkSet
 if !hasmapto('<Plug>MarkSet', 'n')
 	" nmap <unique> <Leader>m <Plug>MarkSet
+	nmap <unique> gd gd:nohlsearch<cr><Plug>MarkSet
 	nmap <unique> u <Plug>MarkSet
+	nmap <unique> U :call mark#ClearAllOther()<cr>
 endif
 if !hasmapto('<Plug>MarkSet', 'x')
 	" xmap <unique> <Leader>m <Plug>MarkSet
@@ -416,19 +419,23 @@ endif
 " No default mapping for <Plug>MarkToggle.
 
 if !hasmapto('<Plug>MarkSearchCurrentNext', 'n')
-	nmap <unique> n <Plug>MarkSearchCurrentNext
+	nmap <unique> - <Plug>MarkSearchCurrentNext
+	nmap <unique> n <Plug>MarkSearchLastMarkNext
 endif
 if !hasmapto('<Plug>MarkSearchCurrentPrev', 'n')
-	nmap <unique> N <Plug>MarkSearchCurrentPrev
+	nmap <unique> _ <Plug>MarkSearchCurrentPrev
+	nmap <unique> N <Plug>MarkSearchLastMarkPrev
 endif
 if !hasmapto('<Plug>MarkSearchAnyNext', 'n')
-	nmap <unique> - <Plug>MarkSearchAnyNext
+	nmap <unique> * <Plug>MarkSearchAnyNext
 endif
 if !hasmapto('<Plug>MarkSearchAnyPrev', 'n')
-	nmap <unique> _ <Plug>MarkSearchAnyPrev
+	nmap <unique> # <Plug>MarkSearchAnyPrev
 endif
+
 " if !hasmapto('<Plug>MarkSearchNext', 'n')
-	" nmap <unique> * <Plug>MarkSearchNext
+	" " nmap <unique> * <Plug>MarkSearchNext
+	" nmap <unique> * <Plug>MarkSearchOrCurNext
 " endif
 " if !hasmapto('<Plug>MarkSearchPrev', 'n')
 	" nmap <unique> # <Plug>MarkSearchPrev
@@ -441,6 +448,28 @@ endif
 " No default mapping for <Plug>MarkSearchGroupPrev
 " No default mapping for <Plug>MarkSearchUsedGroupNext
 " No default mapping for <Plug>MarkSearchUsedGroupPrev
+
+" autocmd BufNew * echom "BufNew " . exists('w:mwMatch') . " " . expand("%:p") . " " . expand("<afile>") . " " . expand("<abuf>")
+" autocmd BufEnter * echom "BufEnter " . exists('w:mwMatch') . " " . expand("%:p") . " " .expand("<afile>") . " " . expand("<abuf>")
+" autocmd BufWinEnter * echom "BufWinEnter " . exists('w:mwMatch') . " " . expand("%:p") . " " .expand("<afile>") . " " . expand("<abuf>")
+" autocmd BufAdd * echom "BufAdd " . exists('w:mwMatch') . " " . expand("%:p") . " " .expand("<afile>") . " " . expand("<abuf>")
+" autocmd WinEnter * echom "WinEnter " . exists('w:mwMatch') . " " . expand("%:p") . " " .expand("<afile>") . " " . expand("<abuf>")
+augroup Mark
+	autocmd!
+	autocmd WinEnter * if ! exists('w:mwMatch') | call mark#UpdateMark() | endif
+	autocmd TabEnter * call mark#UpdateScope()
+augroup END
+
+function! s:MarkSearchMapSlash()
+	cnoremap <silent> <CR> <CR>:call mark#DoMarkAndSetCurrent(v:count, @/)<CR>:set nohlsearch<CR>:call <SID>MarkSearchUnmapSlash()<cr>
+endfunction
+
+function! s:MarkSearchUnmapSlash()
+	cunmap <CR>
+endfunction
+
+nnoremap / :call <SID>MarkSearchMapSlash()<CR>/
+
 
 function! s:MakeDirectGroupMappings()
 	for l:cnt in range(1, g:mwDirectGroupJumpMappingNum)
@@ -523,6 +552,7 @@ if g:mwAutoLoadMarks
 		autocmd VimEnter * call <SID>AutoLoadMarks()
 	augroup END
 endif
+
 
 let &cpo = s:save_cpo
 unlet s:save_cpo
