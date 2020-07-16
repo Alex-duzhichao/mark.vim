@@ -396,7 +396,7 @@ nnoremap <silent> <Plug>MarkSearchCascadePrevNoStop     :<C-u>if ! mark#cascade#
 " nnoremap <unique> e <Plug>MarkSet
 if !hasmapto('<Plug>MarkSet', 'n')
 	" nmap <unique> <Leader>m <Plug>MarkSet
-	nmap <unique> gd gd:nohlsearch<cr><Plug>MarkSet
+	"nmap <unique> gd gd:nohlsearch<cr><Plug>MarkSet
 	nmap <unique> u <Plug>MarkSet
 	nmap <unique> U :call mark#ClearAllOther()<cr>
 endif
